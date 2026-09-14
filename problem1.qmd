@@ -1,0 +1,138 @@
+---
+title: "Problem Set 1 — Problem 1"
+format:
+  html:
+    code-fold: true
+---
+
+# Problem 1 — Exploratory Analysis of Soybean Cultivars
+
+Place `data.csv` in the same folder as this `.qmd` file before rendering.
+
+## Import and label the data
+
+`data.csv` includes a header row. The names are checked and retained using the dataset documentation.
+
+```{r}
+#| message: false
+#| warning: false
+
+if (!file.exists("data.csv")) {
+  stop("Place data.csv in the project folder before rendering this document.")
+}
+
+soy <- read.csv("data.csv", header = TRUE)
+names(soy) <- c(
+  "Season", "Cultivar", "Repetition", "PH", "IFP", "NLP",
+  "NGP", "NGL", "NS", "MHG", "GY"
+)
+
+# Treat experimental labels as categorical variables.
+soy$Season <- factor(soy$Season)
+soy$Cultivar <- factor(soy$Cultivar)
+soy$Repetition <- factor(soy$Repetition)
+
+head(soy)
+```
+
+## Verify the data structure
+
+```{r}
+cat("Number of observations:", nrow(soy), "\n")
+cat("Number of cultivars:", nlevels(soy$Cultivar), "\n")
+cat("Number of seasons:", nlevels(soy$Season), "\n")
+
+season_counts <- as.data.frame(table(Season = soy$Season))
+names(season_counts)[2] <- "Observations"
+season_counts
+```
+
+The checks above should show 320 observations, 40 cultivars, and two seasons.
+
+## Correlation between plant height and grain yield
+
+```{r}
+overall_correlation <- cor(soy$PH, soy$GY)
+overall_correlation
+
+correlation_by_season <- aggregate(
+  cbind(PH, GY) ~ Season,
+  data = soy,
+  FUN = mean
+)
+
+season_correlations <- aggregate(
+  GY ~ Season,
+  data = transform(soy, PH_GY_correlation = ave(
+    PH, Season, FUN = function(x) NA_real_
+  )),
+  FUN = length
+)
+
+# A direct split-apply-combine calculation is clearer for correlations.
+season_correlations <- data.frame(
+  Season = levels(soy$Season),
+  PH_GY_correlation = sapply(split(soy, soy$Season), function(d) cor(d$PH, d$GY))
+)
+season_correlations
+```
+
+The season with the larger `PH_GY_correlation` has the stronger positive association.
+
+## Individual questions
+
+```{r}
+# Grain yield for the observation(s) with the largest plant height.
+tallest_observation <- soy[soy$PH == max(soy$PH),
+                           c("Season", "Cultivar", "Repetition", "PH", "GY")]
+tallest_observation
+
+# Percentage with MHG above the overall MHG average.
+average_mhg <- mean(soy$MHG)
+pct_mhg_above_average <- mean(soy$MHG > average_mhg) * 100
+pct_mhg_above_average
+
+# Cultivar(s) with the highest mean grain yield.
+mean_gy_by_cultivar <- aggregate(GY ~ Cultivar, data = soy, FUN = mean)
+mean_gy_by_cultivar <- mean_gy_by_cultivar[order(-mean_gy_by_cultivar$GY), ]
+head(mean_gy_by_cultivar, 1)
+```
+
+## Mean of each quantitative variable
+
+The variables below are agronomic measurements. Season, cultivar, and repetition are identifiers/design variables and are excluded.
+
+```{r}
+quantitative_vars <- c("PH", "IFP", "NLP", "NGP", "NGL", "NS", "MHG", "GY")
+
+overall_means <- data.frame(
+  Group = "Overall",
+  t(colMeans(soy[quantitative_vars]))
+)
+
+season_means <- aggregate(
+  soy[quantitative_vars],
+  by = list(Season = soy$Season),
+  FUN = mean
+)
+names(season_means)[1] <- "Group"
+season_means$Group <- paste("Season", season_means$Group)
+
+mean_table <- rbind(overall_means, season_means)
+rownames(mean_table) <- NULL
+mean_table
+```
+
+## Do grain yields differ by season?
+
+Let $\mu_1$ and $\mu_2$ denote the population mean grain yields in Seasons 1 and 2.
+
+- Null hypothesis: $H_0: \mu_1 = \mu_2$.
+- Alternative hypothesis: $H_A: \mu_1 \ne \mu_2$.
+
+```{r}
+gy_t_test <- t.test(GY ~ Season, data = soy)
+gy_t_test
+```
+
+Interpret the p-value using a 0.05 significance level: if the p-value is below 0.05, reject $H_0$ and conclude that mean grain yield differs between seasons. Otherwise, state that there is insufficient evidence of a difference in mean grain yield.
