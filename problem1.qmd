@@ -3,11 +3,10 @@ title: "Problem Set 1 — Problem 1"
 format:
   html:
     code-fold: true
+    embed-resources: true
 ---
 
 # Problem 1 — Exploratory Analysis of Soybean Cultivars
-
-Place `data.csv` in the same folder as this `.qmd` file before rendering.
 
 ## Import and label the data
 
