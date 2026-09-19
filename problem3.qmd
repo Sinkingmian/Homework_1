@@ -1,0 +1,87 @@
+---
+title: "Problem Set 1 - Problem 3"
+format:
+  html:
+    code-fold: true
+    embed-resources: true
+---
+
+# Problem 3 - Happy Numbers
+
+## Functions
+
+```{r}
+#' Calculate the next value in a happy-number sequence.
+#'
+#' @param n A single positive integer.
+#' @return The sum of the squares of the digits of `n`.
+nextHappy <- function(n) {
+  if (!is.numeric(n) || length(n) != 1L || is.na(n) ||
+      n <= 0 || n != floor(n)) {
+    stop("n must be a single positive integer.")
+  }
+
+  digits <- as.integer(strsplit(as.character(n), "")[[1]])
+  sum(digits ^ 2)
+}
+
+#' Return the happy-number sequence beginning at a given value.
+#'
+#' @param n A single positive integer.
+#' @return A list with `sequence`, the visited values, and `isHappy`, which
+#'   indicates whether the sequence reaches 1.
+happySequence <- function(n) {
+  if (!is.numeric(n) || length(n) != 1L || is.na(n) ||
+      n <= 0 || n != floor(n)) {
+    stop("n must be a single positive integer.")
+  }
+
+  sequence <- n
+  seen <- integer(0)
+
+  while (tail(sequence, 1) != 1 && !(tail(sequence, 1) %in% seen)) {
+    seen <- c(seen, tail(sequence, 1))
+    sequence <- c(sequence, nextHappy(tail(sequence, 1)))
+  }
+
+  list(sequence = sequence, isHappy = tail(sequence, 1) == 1)
+}
+```
+
+## Required examples
+
+```{r}
+nextHappy(19)
+nextHappy(82)
+happySequence(19)
+happySequence(4)
+```
+
+`nextHappy(19)` is 82 and `nextHappy(82)` is 68. The sequence for 19 is
+19, 82, 68, 100, 1, so 19 is happy. The sequence starting at 4 cycles and
+therefore is not happy.
+
+## Happy numbers from 1 through 1000
+
+```{r}
+all_sequences <- lapply(1:1000, happySequence)
+is_happy <- vapply(all_sequences, function(x) x$isHappy, logical(1))
+sequence_lengths <- vapply(all_sequences, function(x) length(x$sequence), integer(1))
+
+happy_count <- sum(is_happy)
+happy_percent <- mean(is_happy) * 100
+longest_length <- max(sequence_lengths)
+longest_starts <- which(sequence_lengths == longest_length)
+
+data.frame(
+  happy_count = happy_count,
+  happy_percent = happy_percent,
+  longest_length = longest_length,
+  longest_starting_values = paste(longest_starts, collapse = ", ")
+)
+```
+
+There are 143 happy numbers between 1 and 1000, which is 14.3% of the
+integers considered. The longest observed sequence has 20 displayed values
+before reaching a repeated value; it occurs for starting values 269, 296,
+629, 667, 676, 692, 766, 799, 926, 962, 979, and 997.

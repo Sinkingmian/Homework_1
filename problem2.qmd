@@ -1,0 +1,66 @@
+---
+title: "Problem Set 1 - Problem 2"
+format:
+  html:
+    code-fold: true
+    embed-resources: true
+---
+
+# Problem 2 - Adult Income Dataset
+
+## Import data and simplify names
+
+```{r}
+# Download the UCI Adult Income training data if it is not already present.
+data_url <- 'https://archive.ics.uci.edu/ml/machine-learning-databases/adult/adult.data'
+if (!file.exists('adult.data')) download.file(data_url, 'adult.data', mode = 'wb')
+
+adult <- read.csv('adult.data', header = FALSE, na.strings = '?', strip.white = TRUE)
+names(adult) <- c(
+  'age', 'workclass', 'fnlwgt', 'education', 'education_num',
+  'marital_status', 'occupation', 'relationship', 'race', 'sex',
+  'capital_gain', 'capital_loss', 'hours_per_week', 'native_country', 'income'
+)
+
+str(adult)
+```
+
+The names are lower-case, descriptive, and use underscores instead of spaces.
+
+## Missing values
+
+```{r}
+missing_counts <- data.frame(variable = names(adult), missing = colSums(is.na(adult)))
+missing_counts
+```
+
+Only `workclass`, `occupation`, and `native_country` have missing values. The remaining variables have zero missing observations.
+
+## Restrict to people working at least 10 hours per week
+
+```{r}
+n_before <- nrow(adult)
+adult_10hrs <- subset(adult, hours_per_week >= 10)
+n_after_hours <- nrow(adult_10hrs)
+data.frame(stage = c('Before filtering', 'At least 10 hours/week'), n = c(n_before, n_after_hours))
+```
+
+## Remove missing employment and country information
+
+```{r}
+adult_complete <- subset(adult_10hrs, !is.na(occupation) & !is.na(workclass) & !is.na(native_country))
+n_after_missing <- nrow(adult_complete)
+data.frame(stage = 'After removing missing occupation, workclass, or native_country', n = n_after_missing)
+```
+
+These fields are needed to describe employment and country in later analyses. Treating an unreported value as a substantive category would mix nonresponse with genuine responses; removing these incomplete records makes the analytic sample consistent.
+
+## Apply age and education restrictions
+
+```{r}
+adult_final <- subset(adult_complete, age >= 18 & age <= 90 & education != 'Preschool')
+n_final <- nrow(adult_final)
+data.frame(stage = c('After age/education restrictions', 'Final sample'), n = c(n_final, n_final))
+```
+
+The final sample size is reported by the code above.
